@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen, Account } from './types';
-import { ACCOUNTS } from './constants';
+import { ACCOUNTS, RECENT_TRANSACTIONS } from './constants';
 import { Layout } from './components/Layout';
 import { LoginScreen, VerifyIdentityScreen, FaceIDSetup, ConfirmDataScreen, CreatePasswordScreen, VerificationSuccessScreen } from './screens/Auth';
 import { HomeScreen } from './screens/Home';
@@ -19,6 +19,8 @@ import { StatementSelectProduct, StatementSelectPeriod, StatementDeliveryMethod,
 import { ProfileEdit, ProfileSecurity, ProfileHelp, ProfileCardSettings, ProfileLocations } from './screens/flows/ProfileFlow';
 import { NotificationsScreen } from './screens/Notifications';
 import { AllTransactionsScreen } from './screens/AllTransactions';
+import { TransactionDetailScreen } from './screens/TransactionDetail';
+import { Transaction } from './types';
 
 // Placeholder components for other screens to fit within limits
 const Placeholder = ({ title, navigate }: { title: string, navigate: any }) => (
@@ -30,44 +32,73 @@ const Placeholder = ({ title, navigate }: { title: string, navigate: any }) => (
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.LOGIN);
+  const [accounts, setAccounts] = useState<Account[]>(ACCOUNTS);
+  const [transactions, setTransactions] = useState<Transaction[]>(RECENT_TRANSACTIONS);
   const [selectedAccount, setSelectedAccount] = useState<Account>(ACCOUNTS[0]);
   const [transferAmount, setTransferAmount] = useState('0');
+  const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
+  const [sourceAccount, setSourceAccount] = useState<Account>(ACCOUNTS[0]);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [previousScreen, setPreviousScreen] = useState<Screen>(Screen.HOME);
+
+  const navigateWithHistory = (screen: Screen) => {
+    setPreviousScreen(currentScreen);
+    setCurrentScreen(screen);
+  };
   
   // Exchange Flow State
   const [exchangeAmount, setExchangeAmount] = useState('0');
   const [exchangeCurrency, setExchangeCurrency] = useState<'PEN' | 'USD'>('PEN');
 
+  const addTransaction = (tx: Transaction) => {
+    setTransactions(prev => [tx, ...prev]);
+    // Update account balance
+    setAccounts(prev => {
+      const newAccounts = prev.map(acc => {
+        if (acc.id === sourceAccount.id) {
+          const updatedAcc = { ...acc, balance: acc.balance + tx.amount };
+          // Also update the sourceAccount state to keep it in sync for the next operation
+          setSourceAccount(updatedAcc);
+          return updatedAcc;
+        }
+        return acc;
+      });
+      return newAccounts;
+    });
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       // Auth
-      case Screen.LOGIN: return <LoginScreen navigate={setCurrentScreen} />;
-      case Screen.VERIFY_IDENTITY: return <VerifyIdentityScreen navigate={setCurrentScreen} />;
-      case Screen.FACE_ID_SETUP: return <FaceIDSetup navigate={setCurrentScreen} />;
-      case Screen.CONFIRM_DATA: return <ConfirmDataScreen navigate={setCurrentScreen} />;
-      case Screen.CREATE_PASSWORD: return <CreatePasswordScreen navigate={setCurrentScreen} />;
-      case Screen.VERIFICATION_SUCCESS: return <VerificationSuccessScreen navigate={setCurrentScreen} />;
+      case Screen.LOGIN: return <LoginScreen navigate={navigateWithHistory} />;
+      case Screen.VERIFY_IDENTITY: return <VerifyIdentityScreen navigate={navigateWithHistory} />;
+      case Screen.FACE_ID_SETUP: return <FaceIDSetup navigate={navigateWithHistory} />;
+      case Screen.CONFIRM_DATA: return <ConfirmDataScreen navigate={navigateWithHistory} />;
+      case Screen.CREATE_PASSWORD: return <CreatePasswordScreen navigate={navigateWithHistory} />;
+      case Screen.VERIFICATION_SUCCESS: return <VerificationSuccessScreen navigate={navigateWithHistory} />;
       
       // Main Tabs
-      case Screen.HOME: return <HomeScreen navigate={setCurrentScreen} onSelectAccount={setSelectedAccount} />;
-      case Screen.OPERATIONS: return <OperationsScreen navigate={setCurrentScreen} />;
-      case Screen.FOR_YOU: return <ForYouScreen navigate={setCurrentScreen} />;
-      case Screen.PROFILE: return <ProfileScreen navigate={setCurrentScreen} />;
+      case Screen.HOME: return <HomeScreen navigate={navigateWithHistory} onSelectAccount={setSelectedAccount} accounts={accounts} transactions={transactions} onSelectTransaction={setSelectedTransaction} />;
+      case Screen.OPERATIONS: return <OperationsScreen navigate={navigateWithHistory} />;
+      case Screen.FOR_YOU: return <ForYouScreen navigate={navigateWithHistory} />;
+      case Screen.PROFILE: return <ProfileScreen navigate={navigateWithHistory} />;
       
       // Detail Screens
-      case Screen.PRODUCT_DETAIL: return <ProductDetailScreen navigate={setCurrentScreen} account={selectedAccount} />;
-      case Screen.NOTIFICATIONS: return <NotificationsScreen navigate={setCurrentScreen} />;
-      case Screen.ALL_TRANSACTIONS: return <AllTransactionsScreen navigate={setCurrentScreen} />;
+      case Screen.PRODUCT_DETAIL: return <ProductDetailScreen navigate={navigateWithHistory} account={selectedAccount} />;
+      case Screen.NOTIFICATIONS: return <NotificationsScreen navigate={navigateWithHistory} />;
+      case Screen.ALL_TRANSACTIONS: return <AllTransactionsScreen navigate={navigateWithHistory} transactions={transactions} onSelectTransaction={setSelectedTransaction} />;
+      case Screen.TRANSACTION_DETAIL: return <TransactionDetailScreen navigate={navigateWithHistory} transaction={selectedTransaction} onBack={() => setCurrentScreen(previousScreen)} />;
 
       // Transfer Flow
-      case Screen.TRANSFER_SELECT: return <TransferSelect navigate={setCurrentScreen} />;
-      case Screen.TRANSFER_AMOUNT: return <TransferAmount navigate={setCurrentScreen} amount={transferAmount} setAmount={setTransferAmount} />;
-      case Screen.TRANSFER_CONFIRM: return <TransferConfirm navigate={setCurrentScreen} amount={transferAmount} />;
-      case Screen.TRANSFER_SUCCESS: return <TransferSuccess navigate={setCurrentScreen} amount={transferAmount} />;
+      case Screen.TRANSFER_SELECT: return <TransferSelect navigate={navigateWithHistory} setRecipient={setSelectedRecipient} setAmount={setTransferAmount} />;
+      case Screen.TRANSFER_AMOUNT: return <TransferAmount navigate={navigateWithHistory} amount={transferAmount} setAmount={setTransferAmount} recipient={selectedRecipient} sourceAccount={sourceAccount} setSourceAccount={setSourceAccount} />;
+      case Screen.TRANSFER_CONFIRM: return <TransferConfirm navigate={navigateWithHistory} amount={transferAmount} recipient={selectedRecipient} sourceAccount={sourceAccount} addTransaction={addTransaction} />;
+      case Screen.TRANSFER_SUCCESS: return <TransferSuccess navigate={navigateWithHistory} amount={transferAmount} recipient={selectedRecipient} sourceAccount={sourceAccount} />;
 
       // Exchange Flow
-      case Screen.EXCHANGE: return <ExchangeScreen navigate={setCurrentScreen} amount={exchangeAmount} setAmount={setExchangeAmount} currency={exchangeCurrency} setCurrency={setExchangeCurrency} />;
-      case Screen.EXCHANGE_CONFIRM: return <ExchangeConfirm navigate={setCurrentScreen} amount={exchangeAmount} currency={exchangeCurrency} />;
-      case Screen.EXCHANGE_SUCCESS: return <ExchangeSuccess navigate={setCurrentScreen} amount={exchangeAmount} currency={exchangeCurrency} />;
+      case Screen.EXCHANGE: return <ExchangeScreen navigate={navigateWithHistory} amount={exchangeAmount} setAmount={setExchangeAmount} currency={exchangeCurrency} setCurrency={setExchangeCurrency} />;
+      case Screen.EXCHANGE_CONFIRM: return <ExchangeConfirm navigate={navigateWithHistory} amount={exchangeAmount} currency={exchangeCurrency} />;
+      case Screen.EXCHANGE_SUCCESS: return <ExchangeSuccess navigate={navigateWithHistory} amount={exchangeAmount} currency={exchangeCurrency} />;
       
       // Card Payment Flow
       case Screen.CARD_PAYMENT_SELECT: return <CardPaymentSelect navigate={setCurrentScreen} />;

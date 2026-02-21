@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { Screen, Account } from '../types';
-import { CURRENT_USER, ACCOUNTS, RECENT_TRANSACTIONS } from '../constants';
+import { CURRENT_USER } from '../constants';
 import { Bell, ArrowRightLeft, CreditCard, ScanLine, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Transaction } from '../types';
 
 interface HomeProps {
   navigate: (screen: Screen) => void;
   onSelectAccount: (account: Account) => void;
+  accounts: Account[];
+  transactions: Transaction[];
+  onSelectTransaction: (tx: Transaction) => void;
 }
 
-export const HomeScreen: React.FC<HomeProps> = ({ navigate, onSelectAccount }) => {
+export const HomeScreen: React.FC<HomeProps> = ({ navigate, onSelectAccount, accounts, transactions, onSelectTransaction }) => {
   const [hiddenBalances, setHiddenBalances] = useState<Record<string, boolean>>({});
   
   const handleCardClick = (account: Account) => {
@@ -22,6 +26,11 @@ export const HomeScreen: React.FC<HomeProps> = ({ navigate, onSelectAccount }) =
         ...prev,
         [accountId]: !prev[accountId]
     }));
+  };
+
+  const handleTransactionClick = (tx: Transaction) => {
+    onSelectTransaction(tx);
+    navigate(Screen.TRANSACTION_DETAIL);
   };
 
   return (
@@ -47,7 +56,7 @@ export const HomeScreen: React.FC<HomeProps> = ({ navigate, onSelectAccount }) =
 
         {/* Carousel Container */}
         <div className="flex overflow-x-auto snap-x snap-mandatory pb-6 -mx-6 px-6 gap-4 no-scrollbar">
-            {ACCOUNTS.map((account) => (
+            {accounts.map((account) => (
                 <div 
                     key={account.id}
                     onClick={() => handleCardClick(account)}
@@ -109,7 +118,7 @@ export const HomeScreen: React.FC<HomeProps> = ({ navigate, onSelectAccount }) =
                     </div>
 
                     <div className="flex justify-center mt-6 gap-2">
-                         {ACCOUNTS.map(a => (
+                         {accounts.map(a => (
                              <div 
                                 key={`dot-${a.id}`} 
                                 className={`w-2 h-2 rounded-full transition-colors ${
@@ -152,8 +161,8 @@ export const HomeScreen: React.FC<HomeProps> = ({ navigate, onSelectAccount }) =
          </div>
 
          <div className="space-y-4">
-             {RECENT_TRANSACTIONS.map((tx) => (
-                 <div key={tx.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors">
+             {transactions.map((tx) => (
+                 <div key={tx.id} onClick={() => handleTransactionClick(tx)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer">
                      <div className="flex items-center gap-4">
                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tx.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'}`}>
                              {/* Simplified icon logic could go here */}

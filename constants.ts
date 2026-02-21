@@ -64,7 +64,7 @@ export const RECENT_TRANSACTIONS: Transaction[] = [
     subtitle: 'Compras',
     amount: -340.20,
     currency: 'PEN',
-    date: '09 Oct',
+    date: '09 Jan',
     type: 'expense',
     icon: 'shopping'
   }

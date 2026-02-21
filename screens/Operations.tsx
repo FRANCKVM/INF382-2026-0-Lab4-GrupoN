@@ -12,7 +12,7 @@ export const OperationsScreen: React.FC<OpsProps> = ({ navigate }) => {
     {
       title: 'Transferencias',
       items: [
-        { icon: <ArrowRightLeft />, label: 'A otras cuentas', screen: Screen.TRANSFER_SELECT },
+        { icon: <ArrowRightLeft />, label: 'Realizar Transferencia', screen: Screen.TRANSFER_SELECT },
         { icon: <RefreshCw />, label: 'Cambiar soles y dólares', screen: Screen.EXCHANGE },
       ]
     },

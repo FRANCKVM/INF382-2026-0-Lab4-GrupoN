@@ -9,6 +9,39 @@ interface AuthProps {
 
 export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
   const [showPwd, setShowPwd] = useState(false);
+  const [dni, setDni] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = () => {
+    setError('');
+    
+    if (!dni || !password) {
+      setError('Por favor, ingresa tu DNI y contraseña');
+      return;
+    }
+
+    if (dni.length !== 8) {
+      setError('El DNI debe tener 8 dígitos');
+      return;
+    }
+
+    setLoading(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      if (dni === '77665544' && password === 'eder123') {
+        navigate(Screen.HOME);
+      } else if (dni !== '77665544') {
+        setError('El DNI ingresado no está registrado');
+        setLoading(false);
+      } else {
+        setError('La contraseña es incorrecta');
+        setLoading(false);
+      }
+    }, 1000);
+  };
 
   return (
     <div className="p-6 flex flex-col h-full justify-between bg-white">
@@ -27,7 +60,13 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
             <div>
                 <label className="text-sm font-semibold text-slate-700 ml-1">DNI</label>
                 <div className="mt-2 relative">
-                    <input type="number" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all" placeholder="Número de DNI" />
+                    <input 
+                      type="number" 
+                      value={dni}
+                      onChange={(e) => setDni(e.target.value)}
+                      className={`w-full bg-gray-50 border ${error.includes('DNI') ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all`} 
+                      placeholder="Número de DNI" 
+                    />
                     <User className="absolute right-4 top-4 text-gray-400 w-5 h-5" />
                 </div>
             </div>
@@ -37,7 +76,9 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
                 <div className="mt-2 relative">
                     <input 
                         type={showPwd ? "text" : "password"} 
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={`w-full bg-gray-50 border ${error.includes('contraseña') ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all`} 
                         placeholder="••••••••" 
                     />
                     <button onClick={() => setShowPwd(!showPwd)} className="absolute right-4 top-4 text-gray-400">
@@ -47,11 +88,20 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
             </div>
         </div>
 
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 animate-shake">
+            <Info className="text-red-500 w-5 h-5 flex-shrink-0" />
+            <p className="text-xs text-red-600 font-medium">{error}</p>
+          </div>
+        )}
+
         <button className="w-full text-center text-blue-600 font-medium text-sm mt-6">Olvidé mi contraseña</button>
       </div>
 
       <div className="space-y-4 mb-4">
-        <Button onClick={() => navigate(Screen.HOME)}>Continuar</Button>
+        <Button onClick={handleLogin} disabled={loading}>
+          {loading ? 'Validando...' : 'Continuar'}
+        </Button>
         <div className="flex justify-center gap-1 text-sm">
             <span className="text-gray-500">¿No tienes cuenta?</span>
             <button onClick={() => navigate(Screen.VERIFY_IDENTITY)} className="text-blue-600 font-semibold">Regístrate</button>
