@@ -4,7 +4,7 @@ import { Header, Button } from '../../components/UI';
 import { CURRENT_USER } from '../../constants';
 import { 
     Search, CreditCard, Lock, Wallet, ChevronRight, MessageCircle, Phone, 
-    Camera, Bell, Plane, ShieldAlert, Wifi, MapPin, Sliders, CreditCard as CardIcon
+    Camera, Bell, Plane, ShieldAlert, Wifi, MapPin, Sliders, CreditCard as CardIcon, Eye, EyeOff
 } from 'lucide-react';
 
 interface FlowProps {
@@ -285,6 +285,7 @@ export const ProfileCardSelect: React.FC<FlowProps> = ({ navigate, accounts = []
 export const ProfileCardSettings: React.FC<FlowProps> = ({ navigate, account }) => {
     const [limit, setLimit] = useState(2500);
     const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+    const [showCardDetails, setShowCardDetails] = useState(false);
     const [toggles, setToggles] = useState({
         presential: true,
         internet: true,
@@ -312,27 +313,43 @@ export const ProfileCardSettings: React.FC<FlowProps> = ({ navigate, account }) 
             
             <div className="px-6 pb-6 flex-1 overflow-y-auto">
                 {/* Card Visual */}
-                <div className={`mt-4 mb-10 mx-auto w-full max-w-[320px] aspect-[1.58] rounded-2xl shadow-xl p-6 text-white relative overflow-hidden flex flex-col justify-between ${isCredit ? 'bg-slate-900 shadow-slate-900/30' : 'bg-blue-700 shadow-blue-700/30'}`}>
-                    <div className="absolute top-0 right-0 p-8 bg-white/5 rounded-full blur-2xl"></div>
-                    <div className="flex justify-between items-start z-10">
-                        <span className="font-bold tracking-widest text-lg">{isCredit ? 'SIGNATURE' : 'PREMIUM'}</span>
-                        <Wifi className="rotate-90 opacity-80" />
-                    </div>
-                    <div className="z-10">
-                        <div className="flex gap-1.5 mb-4 opacity-80 text-xs">
-                             <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                             <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                             <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                             <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                             <span className="ml-1">••••</span>
-                             <span className="ml-1">••••</span>
-                             <span className="ml-2 text-base font-mono">{(account.cardNumber || account.number).slice(-4)}</span>
+                <div className="relative mt-4 mb-10 mx-auto w-full max-w-[320px]">
+                    <div className={`aspect-[1.58] rounded-2xl shadow-xl p-6 text-white relative overflow-hidden flex flex-col justify-between ${isCredit ? 'bg-slate-900 shadow-slate-900/30' : 'bg-blue-700 shadow-blue-700/30'}`}>
+                        <div className="absolute top-0 right-0 p-8 bg-white/5 rounded-full blur-2xl"></div>
+                        <div className="flex justify-between items-start z-10">
+                            <span className="font-bold tracking-widest text-lg">{isCredit ? 'SIGNATURE' : 'DÉBITO'}</span>
+                            <Wifi className="rotate-90 opacity-80" />
                         </div>
-                        <div className="flex justify-between items-end">
-                            <span className="text-sm font-medium tracking-wide">{CURRENT_USER.name}</span>
-                            <span className="text-[10px] opacity-70">VENCE 09/28</span>
+                        <div className="z-10">
+                            <div className="flex gap-1.5 mb-4 text-base font-mono tracking-widest">
+                                {showCardDetails ? (
+                                    <span>{account.cardNumber || account.number}</span>
+                                ) : (
+                                    <>
+                                        <span>••••</span>
+                                        <span className="ml-2">••••</span>
+                                        <span className="ml-2">••••</span>
+                                        <span className="ml-2">{(account.cardNumber || account.number).slice(-4)}</span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex justify-between items-end">
+                                <span className="text-sm font-medium tracking-wide">{CURRENT_USER.name}</span>
+                                <div className="flex gap-4 text-[10px] opacity-70 font-mono">
+                                    <span>VENCE 09/28</span>
+                                    <span>CVV {showCardDetails ? '123' : '•••'}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <button 
+                        onClick={() => setShowCardDetails(!showCardDetails)}
+                        className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-white text-blue-600 shadow-md rounded-full px-4 py-2 flex items-center gap-2 text-xs font-bold border border-gray-100 z-20"
+                    >
+                        {showCardDetails ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {showCardDetails ? 'Ocultar datos' : 'Ver datos'}
+                    </button>
                 </div>
 
                 {/* Settings Toggles */}

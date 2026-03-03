@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen } from '../types';
+import { CURRENT_USER } from '../constants';
 import { Button, Header } from '../components/UI';
 import { Building2, Lock, ShieldCheck, Camera, User, Eye, EyeOff, Pencil, Calendar, Info, Check, ChevronRight } from 'lucide-react';
 
@@ -9,7 +10,7 @@ interface AuthProps {
 
 export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
   const [showPwd, setShowPwd] = useState(false);
-  const [dni, setDni] = useState('');
+  const [dni, setDni] = useState(() => localStorage.getItem('bancoPeru_savedDni') || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
     setError('');
     
     if (!dni || !password) {
-      setError('Por favor, ingresa tu DNI y contraseña');
+      setError('Por favor, ingresa tu DNI y clave');
       return;
     }
 
@@ -31,13 +32,14 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
 
     // Simulate API call
     setTimeout(() => {
-      if (dni === '77665544' && password === 'eder123') {
+      if (dni === '77665544' && password === '123456') {
+        localStorage.setItem('bancoPeru_savedDni', dni);
         navigate(Screen.HOME);
       } else if (dni !== '77665544') {
         setError('El DNI ingresado no está registrado');
         setLoading(false);
       } else {
-        setError('La contraseña es incorrecta');
+        setError('La clave es incorrecta');
         setLoading(false);
       }
     }, 1000);
@@ -72,14 +74,14 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
             </div>
 
             <div>
-                <label className="text-sm font-semibold text-slate-700 ml-1">Contraseña</label>
+                <label className="text-sm font-semibold text-slate-700 ml-1">Clave</label>
                 <div className="mt-2 relative">
                     <input 
                         type={showPwd ? "text" : "password"} 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className={`w-full bg-gray-50 border ${error.includes('contraseña') ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all`} 
-                        placeholder="••••••••" 
+                        className={`w-full bg-gray-50 border ${error.includes('clave') ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all`} 
+                        placeholder="Clave de 6 dígitos" 
                     />
                     <button onClick={() => setShowPwd(!showPwd)} className="absolute right-4 top-4 text-gray-400">
                         {showPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -95,7 +97,7 @@ export const LoginScreen: React.FC<AuthProps> = ({ navigate }) => {
           </div>
         )}
 
-        <button className="w-full text-center text-blue-600 font-medium text-sm mt-6">Olvidé mi contraseña</button>
+        <button className="w-full text-center text-blue-600 font-medium text-sm mt-6">Olvidé mi clave</button>
       </div>
 
       <div className="space-y-4 mb-4">
@@ -153,7 +155,7 @@ export const VerifyIdentityScreen: React.FC<AuthProps> = ({ navigate }) => {
                 </div>
             </div>
 
-            <Button onClick={() => navigate(Screen.FACE_ID_SETUP)} className="mb-4">Empezar verificación</Button>
+            <Button onClick={() => navigate(Screen.SCAN_DNI)} className="mb-4">Empezar verificación</Button>
             <div className="text-center text-xs text-gray-400 pb-2 flex items-center justify-center gap-2">
                 <Lock size={12} /> Tu información está protegida y encriptada
             </div>
@@ -161,7 +163,7 @@ export const VerifyIdentityScreen: React.FC<AuthProps> = ({ navigate }) => {
     );
 };
 
-export const FaceIDSetup: React.FC<AuthProps> = ({ navigate }) => {
+export const ScanDNIScreen: React.FC<AuthProps> = ({ navigate }) => {
     const [step, setStep] = useState(0);
 
     // Simulate scanning
@@ -175,16 +177,105 @@ export const FaceIDSetup: React.FC<AuthProps> = ({ navigate }) => {
     }, [step, navigate]);
 
     return (
-        <div className="p-6 flex flex-col h-full bg-white items-center justify-between">
-            <Header className="w-full" title="" onBack={() => navigate(Screen.VERIFY_IDENTITY)} rightElement={<div className="bg-gray-100 p-2 rounded-full"><div className="text-xs font-bold text-gray-600">?</div></div>} />
+        <div className="p-6 flex flex-col min-h-screen bg-slate-900 items-center justify-between text-white">
+            <Header className="w-full text-white" title="" onBack={() => navigate(Screen.VERIFY_IDENTITY)} />
             
-            <div className="flex flex-col items-center w-full">
+            <div className="w-full px-6 mt-2 mb-6">
+                <div className="flex justify-between items-center text-sm font-medium mb-2">
+                    <span className="text-white">Verificación de Identidad</span>
+                    <span className="text-slate-400">Paso 1 de 4</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 w-1/4 rounded-full"></div>
+                </div>
+            </div>
+
+            <div className="flex flex-col items-center justify-center flex-1 w-full">
+                <h2 className="text-2xl font-bold mb-2 text-center">{step === 0 ? "Escanea tu DNI" : "Procesando..."}</h2>
+                <p className="text-center text-slate-400 mb-12 max-w-xs">
+                    {step === 0 ? "Coloca la parte frontal de tu DNI dentro del recuadro." : "Por favor, no muevas el documento."}
+                </p>
+                
+                <div className="relative w-full max-w-sm aspect-[1.6/1] mb-8">
+                    {/* Camera Viewfinder Simulation */}
+                    <div className={`absolute inset-0 border-2 ${step === 1 ? 'border-blue-500 bg-blue-500/10' : 'border-white/30'} rounded-2xl overflow-hidden flex items-center justify-center`}>
+                        {step === 0 ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center opacity-30">
+                                <User size={48} className="mb-2" />
+                                <div className="w-3/4 h-2 bg-white rounded-full mb-2"></div>
+                                <div className="w-1/2 h-2 bg-white rounded-full"></div>
+                            </div>
+                        ) : (
+                            <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Corner Guides */}
+                    <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
+                    <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
+                    <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-xl"></div>
+                    
+                    {/* Scanning Line Animation */}
+                    {step === 1 && (
+                        <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                    )}
+                </div>
+            </div>
+
+            {step === 0 && (
+                <div className="w-full space-y-4 mb-4">
+                     <Button onClick={() => setStep(1)} icon={<Camera size={20} />}>Tomar foto</Button>
+                </div>
+            )}
+            
+            <style>{`
+                @keyframes scan {
+                    0% { top: 0; }
+                    50% { top: 100%; }
+                    100% { top: 0; }
+                }
+            `}</style>
+        </div>
+    );
+};
+
+export const FaceIDSetup: React.FC<AuthProps> = ({ navigate }) => {
+    const [step, setStep] = useState(0);
+
+    // Simulate scanning
+    useEffect(() => {
+        if (step === 1) {
+            const timer = setTimeout(() => {
+                navigate(Screen.CREATE_PASSWORD);
+            }, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [step, navigate]);
+
+    return (
+        <div className="p-6 flex flex-col min-h-screen bg-white items-center justify-between">
+            <Header className="w-full" title="" onBack={() => navigate(Screen.CONFIRM_DATA)} />
+            
+            <div className="w-full px-6 mt-2 mb-6">
+                <div className="flex justify-between items-center text-sm font-medium mb-2">
+                    <span className="text-slate-900">Verificación de Identidad</span>
+                    <span className="text-gray-400">Paso 3 de 4</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-600 w-3/4 rounded-full"></div>
+                </div>
+            </div>
+
+            <div className="flex flex-col items-center w-full flex-1 justify-center">
                 <h2 className="text-2xl font-bold mb-8">{step === 0 ? "Verificación Facial" : "Escaneando..."}</h2>
                 
                 <div className="relative w-64 h-64">
                     <div className={`absolute inset-0 rounded-full border-4 ${step === 1 ? 'border-blue-600 animate-pulse' : 'border-gray-200'} z-10`}></div>
                     <div className="absolute inset-2 rounded-full overflow-hidden bg-gray-100">
-                        <img src="https://i.pravatar.cc/300?u=a042581f4e29026704d" className="w-full h-full object-cover" alt="Selfie" />
+                        <img src={CURRENT_USER.avatar} className="w-full h-full object-cover" alt="Selfie" />
                     </div>
                     {step === 1 && (
                          <div className="absolute inset-0 rounded-full border-t-4 border-blue-600 animate-spin z-20"></div>
@@ -211,36 +302,34 @@ export const FaceIDSetup: React.FC<AuthProps> = ({ navigate }) => {
 export const ConfirmDataScreen: React.FC<AuthProps> = ({ navigate }) => {
     return (
         <div className="bg-white min-h-screen flex flex-col">
-            <Header title="Confirmar Datos" onBack={() => navigate(Screen.FACE_ID_SETUP)} />
+            <Header title="Confirmar Datos" onBack={() => navigate(Screen.SCAN_DNI)} />
             
             <div className="px-6 mt-2 mb-6">
                 <div className="flex justify-between items-center text-sm font-medium mb-2">
                     <span className="text-slate-900">Verificación de Identidad</span>
-                    <span className="text-gray-400">Paso 3 de 4</span>
+                    <span className="text-gray-400">Paso 2 de 4</span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 w-3/4 rounded-full"></div>
+                    <div className="h-full bg-blue-600 w-2/4 rounded-full"></div>
                 </div>
             </div>
 
             <div className="flex-1 px-6 pb-6 overflow-y-auto">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">Verifica tus datos</h2>
-                <p className="text-gray-500 mb-8">Hemos extraído esta información de tu DNI. Edítala si encuentras algún error.</p>
+                <p className="text-gray-500 mb-8">Hemos extraído esta información de tu DNI. Si hay algún error, por favor escanea tu documento nuevamente.</p>
 
                 <div className="space-y-5">
                     <div>
                         <label className="text-sm font-semibold text-slate-700 ml-1">Nombres</label>
                         <div className="mt-1.5 relative">
-                            <input type="text" defaultValue="Juan Alberto" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-slate-900 outline-none focus:border-blue-600" />
-                            <Pencil className="absolute right-4 top-4 text-blue-600 w-4 h-4" />
+                            <input type="text" readOnly defaultValue="Alejandro" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-slate-500 outline-none" />
                         </div>
                     </div>
 
                     <div>
                         <label className="text-sm font-semibold text-slate-700 ml-1">Apellidos</label>
                         <div className="mt-1.5 relative">
-                            <input type="text" defaultValue="Pérez Quispe" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-slate-900 outline-none focus:border-blue-600" />
-                            <Pencil className="absolute right-4 top-4 text-blue-600 w-4 h-4" />
+                            <input type="text" readOnly defaultValue="Pérez Quispe" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-slate-500 outline-none" />
                         </div>
                     </div>
 
@@ -248,30 +337,23 @@ export const ConfirmDataScreen: React.FC<AuthProps> = ({ navigate }) => {
                         <div className="flex-1">
                             <label className="text-sm font-semibold text-slate-700 ml-1">DNI</label>
                             <div className="mt-1.5 relative">
-                                <input type="text" defaultValue="45892310" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-slate-900 outline-none focus:border-blue-600" />
-                                <Pencil className="absolute right-4 top-4 text-blue-600 w-4 h-4" />
+                                <input type="text" readOnly defaultValue="45892310" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-slate-500 outline-none" />
                             </div>
                         </div>
                         <div className="flex-1">
                             <label className="text-sm font-semibold text-slate-700 ml-1">Nacimiento</label>
                             <div className="mt-1.5 relative">
-                                <input type="text" defaultValue="12/05/1990" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-slate-900 outline-none focus:border-blue-600" />
-                                <Calendar className="absolute right-4 top-4 text-blue-600 w-4 h-4" />
+                                <input type="text" readOnly defaultValue="12/05/1990" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-slate-500 outline-none" />
+                                <Calendar className="absolute right-4 top-4 text-gray-400 w-4 h-4" />
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 mt-6">
-                        <Info className="text-blue-600 w-5 h-5 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                            Por favor, asegúrate que tus datos coincidan exactamente con tu documento físico para evitar problemas de verificación.
-                        </p>
                     </div>
                 </div>
             </div>
 
-            <div className="p-6 pt-2 border-t border-gray-50 bg-white">
-                <Button onClick={() => navigate(Screen.CREATE_PASSWORD)}>Confirmar y continuar</Button>
+            <div className="p-6 pt-2 border-t border-gray-50 bg-white space-y-3">
+                <Button onClick={() => navigate(Screen.FACE_ID_SETUP)}>Confirmar y continuar</Button>
+                <Button variant="secondary" onClick={() => navigate(Screen.SCAN_DNI)}>Volver a escanear DNI</Button>
             </div>
         </div>
     );
@@ -280,10 +362,56 @@ export const ConfirmDataScreen: React.FC<AuthProps> = ({ navigate }) => {
 export const CreatePasswordScreen: React.FC<AuthProps> = ({ navigate }) => {
     const [showPwd1, setShowPwd1] = useState(false);
     const [showPwd2, setShowPwd2] = useState(false);
+    const [pwd1, setPwd1] = useState('');
+    const [pwd2, setPwd2] = useState('');
+    const [error, setError] = useState('');
+
+    const handleFinalize = () => {
+        if (!pwd1 || !pwd2) {
+            setError('Por favor, completa ambos campos');
+            return;
+        }
+
+        if (pwd1.length !== 6) {
+            setError('La clave debe tener exactamente 6 dígitos');
+            return;
+        }
+
+        if (!/^\d+$/.test(pwd1)) {
+            setError('La clave debe contener solo números');
+            return;
+        }
+
+        if (pwd1 !== pwd2) {
+            setError('Las claves no coinciden');
+            return;
+        }
+
+        // Check for consecutive numbers (e.g., 123456)
+        const isConsecutive = (s: string) => {
+            for (let i = 0; i < s.length - 1; i++) {
+                if (Math.abs(parseInt(s[i]) - parseInt(s[i+1])) !== 1) return false;
+            }
+            return true;
+        };
+
+        if (isConsecutive(pwd1)) {
+            setError('No uses números consecutivos');
+            return;
+        }
+
+        // Check for repeated numbers (e.g., 111111)
+        if (/^(\d)\1+$/.test(pwd1)) {
+            setError('No uses números repetidos');
+            return;
+        }
+
+        navigate(Screen.VERIFICATION_SUCCESS);
+    };
 
     return (
         <div className="bg-white min-h-screen flex flex-col">
-            <Header title="" onBack={() => navigate(Screen.CONFIRM_DATA)} rightElement={<span className="text-xs font-medium text-gray-500">Paso 4 de 4</span>} />
+            <Header title="Crear Clave" onBack={() => navigate(Screen.FACE_ID_SETUP)} rightElement={<span className="text-xs font-medium text-gray-500">Paso 4 de 4</span>} />
             
              <div className="px-6 mt-2 mb-2">
                 <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -292,16 +420,22 @@ export const CreatePasswordScreen: React.FC<AuthProps> = ({ navigate }) => {
             </div>
 
             <div className="flex-1 px-6 py-6 overflow-y-auto">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Crea tu contraseña</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Crea tu clave de 6 dígitos</h2>
                 <p className="text-gray-500 mb-8">Esta será tu clave para ingresar a la app</p>
 
                 <div className="space-y-6">
                     <div>
-                        <label className="text-sm font-semibold text-slate-700 ml-1">Nueva contraseña</label>
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Nueva clave</label>
                         <div className="mt-2 relative">
                             <input 
                                 type={showPwd1 ? "text" : "password"} 
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all tracking-widest" 
+                                value={pwd1}
+                                onChange={(e) => {
+                                    setPwd1(e.target.value);
+                                    setError('');
+                                }}
+                                maxLength={6}
+                                className={`w-full bg-gray-50 border ${error && !pwd2 ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all tracking-widest`} 
                                 placeholder="••••••" 
                             />
                             <button onClick={() => setShowPwd1(!showPwd1)} className="absolute right-4 top-4 text-gray-400">
@@ -311,11 +445,17 @@ export const CreatePasswordScreen: React.FC<AuthProps> = ({ navigate }) => {
                     </div>
 
                     <div>
-                        <label className="text-sm font-semibold text-slate-700 ml-1">Confirmar contraseña</label>
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Confirmar clave</label>
                         <div className="mt-2 relative">
                             <input 
                                 type={showPwd2 ? "text" : "password"} 
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all tracking-widest" 
+                                value={pwd2}
+                                onChange={(e) => {
+                                    setPwd2(e.target.value);
+                                    setError('');
+                                }}
+                                maxLength={6}
+                                className={`w-full bg-gray-50 border ${error && pwd1 !== pwd2 ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-4 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all tracking-widest`} 
                                 placeholder="••••••" 
                             />
                             <button onClick={() => setShowPwd2(!showPwd2)} className="absolute right-4 top-4 text-gray-400">
@@ -323,35 +463,18 @@ export const CreatePasswordScreen: React.FC<AuthProps> = ({ navigate }) => {
                             </button>
                         </div>
                     </div>
-                </div>
 
-                <div className="mt-10 bg-gray-50 rounded-2xl p-6">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Requisitos de seguridad</h4>
-                    <ul className="space-y-3">
-                        <li className="flex items-center gap-3 text-sm text-slate-700">
-                            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                                <Check className="text-white w-3 h-3" strokeWidth={3} />
-                            </div>
-                            Exactamente 6 dígitos
-                        </li>
-                        <li className="flex items-center gap-3 text-sm text-gray-500">
-                            <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center"></div>
-                            No usar números consecutivos (123...)
-                        </li>
-                        <li className="flex items-center gap-3 text-sm text-gray-500">
-                            <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center"></div>
-                            No usar números repetidos (111...)
-                        </li>
-                         <li className="flex items-center gap-3 text-sm text-gray-500">
-                            <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center"></div>
-                            No usar tu fecha de nacimiento o DNI
-                        </li>
-                    </ul>
+                    {error && (
+                        <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                            <Info size={16} />
+                            {error}
+                        </div>
+                    )}
                 </div>
             </div>
 
             <div className="p-6 pt-2 border-t border-gray-50 bg-white">
-                <Button onClick={() => navigate(Screen.VERIFICATION_SUCCESS)}>Finalizar</Button>
+                <Button onClick={handleFinalize}>Finalizar</Button>
             </div>
         </div>
     );
@@ -374,21 +497,8 @@ export const VerificationSuccessScreen: React.FC<AuthProps> = ({ navigate }) => 
 
                 <h2 className="text-2xl font-bold text-slate-900 mb-3 text-center">¡Identidad verificada!</h2>
                 <p className="text-gray-500 text-center max-w-xs mb-10">
-                    Ya puedes disfrutar de todos los beneficios de tu cuenta
+                    Ya puedes acceder a todos los beneficios de tu banca móvil
                 </p>
-
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 w-full flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                            <ShieldCheck className="text-green-600 w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                            <h4 className="font-bold text-slate-900 text-sm">Cuenta Premium Activa</h4>
-                            <p className="text-xs text-gray-500">Tu seguridad es nuestra prioridad</p>
-                        </div>
-                    </div>
-                    <ChevronRight className="text-gray-300 w-5 h-5" />
-                </div>
             </div>
 
             <Button onClick={() => navigate(Screen.HOME)}>Ir a mi cuenta</Button>

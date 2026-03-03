@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Screen, Account } from './types';
 import { ACCOUNTS, RECENT_TRANSACTIONS } from './constants';
 import { Layout } from './components/Layout';
-import { LoginScreen, VerifyIdentityScreen, FaceIDSetup, ConfirmDataScreen, CreatePasswordScreen, VerificationSuccessScreen } from './screens/Auth';
+import { LoginScreen, VerifyIdentityScreen, ScanDNIScreen, FaceIDSetup, ConfirmDataScreen, CreatePasswordScreen, VerificationSuccessScreen } from './screens/Auth';
 import { HomeScreen } from './screens/Home';
 import { OperationsScreen } from './screens/Operations';
 import { ProfileScreen } from './screens/Profile';
@@ -54,11 +54,12 @@ const App: React.FC = () => {
   const [selectedService, setSelectedService] = useState<any>(null);
   const [serviceSupply, setServiceSupply] = useState('');
   const [serviceAmount, setServiceAmount] = useState(0);
-  const [favoriteServices, setFavoriteServices] = useState<any[]>([
-      { id: 1, name: 'Sedapal', detail: 'Departamento Lima', icon: 'S', color: 'bg-blue-500', type: 'Agua', inputLabel: 'Número de suministro', inputType: 'number', inputPlaceholder: 'Ej. 1234567', savedSupply: '1234567' },
-      { id: 2, name: 'Luz del Sur', detail: 'Casa Playa', icon: 'L', color: 'bg-amber-400', type: 'Luz', inputLabel: 'Número de suministro', inputType: 'number', inputPlaceholder: 'Ej. 1234567', savedSupply: '9876543' },
-      { id: 3, name: 'Claro', detail: 'Internet Hogar', icon: 'C', color: 'bg-red-500', type: 'Internet', inputLabel: 'Número de teléfono o DNI', inputType: 'text', inputPlaceholder: 'Ej. 999888777', savedSupply: '999888777' },
-  ]);
+  const [favoriteServices, setFavoriteServices] = useState<any[]>([]);
+  const [paidServices, setPaidServices] = useState<string[]>([]);
+
+  const markServiceAsPaid = (serviceId: string, supply: string) => {
+      setPaidServices(prev => [...prev, `${serviceId}-${supply}`]);
+  };
 
   const addFavoriteService = (service: any, supply: string) => {
       setFavoriteServices(prev => {
@@ -102,6 +103,7 @@ const App: React.FC = () => {
       // Auth
       case Screen.LOGIN: return <LoginScreen navigate={navigateWithHistory} />;
       case Screen.VERIFY_IDENTITY: return <VerifyIdentityScreen navigate={navigateWithHistory} />;
+      case Screen.SCAN_DNI: return <ScanDNIScreen navigate={navigateWithHistory} />;
       case Screen.FACE_ID_SETUP: return <FaceIDSetup navigate={navigateWithHistory} />;
       case Screen.CONFIRM_DATA: return <ConfirmDataScreen navigate={navigateWithHistory} />;
       case Screen.CREATE_PASSWORD: return <CreatePasswordScreen navigate={navigateWithHistory} />;
@@ -151,10 +153,10 @@ const App: React.FC = () => {
       case Screen.GOAL_DETAIL: return <GoalDetail navigate={setCurrentScreen} />;
 
       // Services Flow
-      case Screen.SERVICES_SELECT: return <ServicesSelect navigate={setCurrentScreen} onSelectService={setSelectedService} favorites={favoriteServices} setSupply={setServiceSupply} />;
+      case Screen.SERVICES_SELECT: return <ServicesSelect navigate={setCurrentScreen} onSelectService={setSelectedService} favorites={favoriteServices} setSupply={setServiceSupply} previousScreen={previousScreen} />;
       case Screen.SERVICES_DETAILS: return <ServicesDetails navigate={setCurrentScreen} service={selectedService} supply={serviceSupply} setSupply={setServiceSupply} addFavorite={addFavoriteService} />;
-      case Screen.SERVICES_DEBT: return <ServicesDebt navigate={setCurrentScreen} service={selectedService} supply={serviceSupply} setAmount={setServiceAmount} />;
-      case Screen.SERVICES_CONFIRM: return <ServicesConfirm navigate={setCurrentScreen} service={selectedService} supply={serviceSupply} amount={serviceAmount} sourceAccount={sourceAccount} setSourceAccount={setSourceAccount} addTransaction={addTransaction} />;
+      case Screen.SERVICES_DEBT: return <ServicesDebt navigate={setCurrentScreen} service={selectedService} supply={serviceSupply} setAmount={setServiceAmount} paidServices={paidServices} />;
+      case Screen.SERVICES_CONFIRM: return <ServicesConfirm navigate={setCurrentScreen} service={selectedService} supply={serviceSupply} amount={serviceAmount} sourceAccount={sourceAccount} setSourceAccount={setSourceAccount} addTransaction={addTransaction} markServiceAsPaid={markServiceAsPaid} />;
       case Screen.SERVICES_SUCCESS: return <ServicesSuccess navigate={setCurrentScreen} service={selectedService} amount={serviceAmount} sourceAccount={sourceAccount} />;
 
       // QR Flow

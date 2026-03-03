@@ -13,7 +13,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeScreen, navigate
 
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto relative shadow-2xl overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-y-auto pb-20 no-scrollbar">
+      <div className={`flex-1 overflow-y-auto no-scrollbar ${isTabScreen ? 'pb-20' : ''}`}>
         {children}
       </div>
 

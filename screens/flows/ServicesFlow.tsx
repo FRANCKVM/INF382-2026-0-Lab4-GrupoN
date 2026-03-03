@@ -21,10 +21,13 @@ interface FlowProps {
   addTransaction?: (tx: Transaction) => void;
   favorites?: any[];
   addFavorite?: (service: any, supply: string) => void;
+  paidServices?: string[];
+  markServiceAsPaid?: (serviceId: string, supply: string) => void;
+  previousScreen?: Screen;
 }
 
 // 1. Service Selection Screen
-export const ServicesSelect: React.FC<FlowProps> = ({ navigate, onSelectService, favorites = [], setSupply }) => {
+export const ServicesSelect: React.FC<FlowProps> = ({ navigate, onSelectService, favorites = [], setSupply, previousScreen = Screen.HOME }) => {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -96,8 +99,7 @@ export const ServicesSelect: React.FC<FlowProps> = ({ navigate, onSelectService,
         <div className="bg-gray-50 min-h-screen flex flex-col">
             <Header 
                 title={selectedCategory ? selectedCategory : "Pagar servicios"} 
-                onBack={() => selectedCategory ? setSelectedCategory(null) : navigate(Screen.OPERATIONS)} 
-                rightElement={<HelpCircle className="text-slate-900" size={24} />}
+                onBack={() => selectedCategory ? setSelectedCategory(null) : navigate(previousScreen)} 
             />
             
             <div className="px-6 py-4 flex-1 overflow-y-auto">
@@ -260,9 +262,6 @@ export const ServicesDetails: React.FC<FlowProps> = ({ navigate, service, supply
                             <h4 className="font-bold text-slate-900 text-lg">{service.name}</h4>
                         </div>
                     </div>
-                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                        <Check size={14} className="text-white" strokeWidth={3} />
-                    </div>
                 </div>
 
                 {/* Input */}
@@ -275,9 +274,6 @@ export const ServicesDetails: React.FC<FlowProps> = ({ navigate, service, supply
                         placeholder={service.inputPlaceholder || "Ej. 1234567"}
                         className="w-full bg-white border border-gray-300 rounded-xl px-4 py-4 text-lg outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
                     />
-                    <div className="absolute right-4 top-4 bg-blue-600 rounded-full p-0.5">
-                        <HelpCircle className="text-white" size={16} />
-                    </div>
                 </div>
                 <p className="text-slate-500 text-sm leading-relaxed mb-8">
                     Ingresa el dato solicitado para buscar tus recibos pendientes.
@@ -309,14 +305,39 @@ export const ServicesDetails: React.FC<FlowProps> = ({ navigate, service, supply
 };
 
 // 3. Debt Selection (Pending Bills)
-export const ServicesDebt: React.FC<FlowProps> = ({ navigate, service, supply, setAmount }) => {
+export const ServicesDebt: React.FC<FlowProps> = ({ navigate, service, supply, setAmount, paidServices = [] }) => {
+    const isPaid = service && supply ? paidServices.includes(`${service.id}-${supply}`) : false;
+
     const bills = React.useMemo(() => {
-        if (!service) return [];
+        if (!service || isPaid) return [];
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
         
-        // January and February 2026 (last 2 months relative to March 2026)
-        const jan = { month: 0, year: 2026 };
-        const feb = { month: 1, year: 2026 };
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+
+        const getBillData = (monthsAgo: number) => {
+            let m = currentMonth - monthsAgo;
+            let y = currentYear;
+            if (m < 0) {
+                m += 12;
+                y -= 1;
+            }
+            const dueDate = new Date(y, m, 15);
+            dueDate.setHours(23, 59, 59, 999);
+            const isOverdue = today > dueDate;
+            
+            return {
+                month: m,
+                year: y,
+                status: `${isOverdue ? 'Vencido' : 'Vence'} 15 ${months[m].slice(0, 3)}`,
+                color: isOverdue ? 'text-red-500' : 'text-orange-500'
+            };
+        };
+
+        const bill1 = getBillData(2);
+        const bill2 = getBillData(1);
 
         let baseAmount = 50;
         if (service.type === 'Luz') baseAmount = 125.40;
@@ -325,23 +346,23 @@ export const ServicesDebt: React.FC<FlowProps> = ({ navigate, service, supply, s
         else if (service.type === 'Educación') baseAmount = 950.00;
 
         // Personalize amount based on service ID
-        const seed = service.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        const seed = String(service.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
         const getAmount = (base: number, offset: number) => base + (seed % 25) + (offset * 3.25);
 
         return [
             { 
                 id: 0, 
-                month: `${months[jan.month]} ${jan.year}`, 
+                month: `${months[bill1.month]} ${bill1.year}`, 
                 amount: getAmount(baseAmount, 0), 
-                status: `Vencido 15 ${months[jan.month].slice(0, 3)}`, 
-                color: 'text-red-500' 
+                status: bill1.status, 
+                color: bill1.color 
             },
             { 
                 id: 1, 
-                month: `${months[feb.month]} ${feb.year}`, 
+                month: `${months[bill2.month]} ${bill2.year}`, 
                 amount: getAmount(baseAmount, 1), 
-                status: `Vence 15 ${months[feb.month].slice(0, 3)}`, 
-                color: 'text-orange-500' 
+                status: bill2.status, 
+                color: bill2.color 
             }
         ];
     }, [service]);
@@ -380,60 +401,80 @@ export const ServicesDebt: React.FC<FlowProps> = ({ navigate, service, supply, s
 
                 <div className="flex justify-between items-center mb-4">
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">SELECCIONAR DEUDA</span>
-                    <button onClick={selectAll} className="text-blue-600 font-bold text-sm">
-                        {selected.every(Boolean) ? 'Deseleccionar todo' : 'Seleccionar todo'}
-                    </button>
+                    {!isPaid && bills.length > 0 && (
+                        <button onClick={selectAll} className="text-blue-600 font-bold text-sm">
+                            {selected.every(Boolean) ? 'Deseleccionar todo' : 'Seleccionar todo'}
+                        </button>
+                    )}
                 </div>
 
-                <div className="space-y-4">
-                    {bills.map((bill, index) => (
-                        <div key={bill.id} className={`bg-white p-4 rounded-2xl border-2 transition-all ${selected[index] ? 'border-blue-600 shadow-md' : 'border-transparent shadow-sm'}`}>
-                            <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <h4 className="font-bold text-slate-900">{bill.month}</h4>
-                                    <div className={`flex items-center gap-1 mt-1 ${bill.color}`}>
-                                        {index < 2 && <AlertCircle size={12} />}
-                                        <span className="text-xs font-bold">{bill.status}</span>
+                {isPaid || bills.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+                        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                            <Check className="text-green-500 w-10 h-10" strokeWidth={3} />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Estás al día</h3>
+                        <p className="text-gray-500 max-w-xs">No tienes recibos pendientes de pago para este suministro.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {bills.map((bill, index) => (
+                            <div key={bill.id} className={`bg-white p-4 rounded-2xl border-2 transition-all ${selected[index] ? 'border-blue-600 shadow-md' : 'border-transparent shadow-sm'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 className="font-bold text-slate-900">{bill.month}</h4>
+                                        <div className={`flex items-center gap-1 mt-1 ${bill.color}`}>
+                                            {index < 2 && <AlertCircle size={12} />}
+                                            <span className="text-xs font-bold">{bill.status}</span>
+                                        </div>
+                                    </div>
+                                    <div 
+                                        onClick={() => {
+                                            const newSelected = [...selected];
+                                            newSelected[index] = !newSelected[index];
+                                            setSelected(newSelected);
+                                        }}
+                                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer ${selected[index] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
+                                    >
+                                        {selected[index] && <Check size={14} className="text-white" strokeWidth={3} />}
                                     </div>
                                 </div>
-                                <div 
-                                    onClick={() => {
-                                        const newSelected = [...selected];
-                                        newSelected[index] = !newSelected[index];
-                                        setSelected(newSelected);
-                                    }}
-                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer ${selected[index] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                                >
-                                    {selected[index] && <Check size={14} className="text-white" strokeWidth={3} />}
-                                </div>
+                                <p className="text-right text-lg font-bold text-slate-900">S/ {bill.amount.toFixed(2)}</p>
                             </div>
-                            <p className="text-right text-lg font-bold text-slate-900">S/ {bill.amount.toFixed(2)}</p>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 <div className="flex-1"></div>
 
                 {/* Bottom Card Summary */}
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mt-8 mb-4">
-                    <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-4">
-                        <span className="text-gray-500 font-medium">Total a pagar</span>
-                        <div className="flex items-end gap-1">
-                            <span className="text-sm font-bold text-gray-400 mb-1">S/</span>
-                            <span className="text-3xl font-bold text-slate-900">{totalAmount.toFixed(2)}</span>
+                {!isPaid && bills.length > 0 && (
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mt-8 mb-4">
+                        <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-4">
+                            <span className="text-gray-500 font-medium">Total a pagar</span>
+                            <div className="flex items-end gap-1">
+                                <span className="text-sm font-bold text-gray-400 mb-1">S/</span>
+                                <span className="text-3xl font-bold text-slate-900">{totalAmount.toFixed(2)}</span>
+                            </div>
                         </div>
+                        <Button onClick={handleContinue} disabled={totalAmount === 0} icon={<ChevronRight className="order-last" />}>
+                            Continuar
+                        </Button>
                     </div>
-                    <Button onClick={handleContinue} disabled={totalAmount === 0} icon={<ChevronRight className="order-last" />}>
-                        Continuar
-                    </Button>
-                </div>
+                )}
+                
+                {(isPaid || bills.length === 0) && (
+                    <div className="mt-8 mb-4">
+                        <Button onClick={() => navigate(Screen.HOME)}>Volver al inicio</Button>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
 // 4. Payment Confirmation
-export const ServicesConfirm: React.FC<FlowProps> = ({ navigate, service, supply, amount, sourceAccount, setSourceAccount, addTransaction }) => {
+export const ServicesConfirm: React.FC<FlowProps> = ({ navigate, service, supply, amount, sourceAccount, setSourceAccount, addTransaction, markServiceAsPaid }) => {
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     
     if (!service || !sourceAccount) return null;
@@ -449,6 +490,9 @@ export const ServicesConfirm: React.FC<FlowProps> = ({ navigate, service, supply
                 date: 'Hoy',
                 type: 'expense'
             });
+        }
+        if (markServiceAsPaid && supply) {
+            markServiceAsPaid(service.id, supply);
         }
         navigate(Screen.SERVICES_SUCCESS);
     };
@@ -598,23 +642,29 @@ export const ServicesSuccess: React.FC<FlowProps> = ({ navigate, service, amount
                 <div className="space-y-4">
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Nro. Operación</span>
-                        <span className="font-bold text-slate-900">{Math.floor(Math.random() * 10000000).toString().padStart(8, '0')}</span>
+                        <span className="font-bold text-slate-900">#{Math.floor(Math.random() * 10000000).toString().padStart(8, '0')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Fecha</span>
                         <div className="text-right">
-                             <p className="font-bold text-slate-900">{new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                             <p className="text-xs text-gray-400">{new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</p>
+                             <p className="font-bold text-slate-900">
+                                 {new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })} • {new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                             </p>
+                        </div>
+                    </div>
+                    <div className="flex justify-between text-sm items-center">
+                        <span className="text-gray-500">Medio de pago</span>
+                        <div className="flex items-center gap-2">
+                             <span className="font-bold text-slate-900">{sourceAccount.name} **** {sourceAccount.number.slice(-4)}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="w-full mt-auto">
+            <div className="w-full mt-auto mb-6 space-y-4">
+                <Button icon={<Share size={20} />} className="flex items-center justify-center gap-2">Compartir comprobante</Button>
                 <Button variant="outline" onClick={() => navigate(Screen.HOME)}>Volver al inicio</Button>
             </div>
-            
-             <div className="w-32 h-1 bg-gray-300 rounded-full mt-6 mx-auto"></div>
         </div>
     );
 };

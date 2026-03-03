@@ -10,6 +10,29 @@
         body { font-family: 'Inter', sans-serif; }
         /* Hide scrollbar for clean mobile look */
         ::-webkit-scrollbar { width: 0px; background: transparent; }
+        
+        /* Hide spin buttons for number inputs */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        /* Hide browser default password reveal button */
+        input::-ms-reveal,
+        input::-ms-clear {
+            display: none;
+        }
+        input::-webkit-contacts-auto-fill-button,
+        input::-webkit-credentials-auto-fill-button {
+            display: none !important;
+            visibility: hidden;
+            pointer-events: none;
+            position: absolute;
+            right: 0;
+        }
     </style>
 <script type="importmap">
 {
